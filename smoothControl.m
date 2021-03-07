@@ -24,6 +24,13 @@ function [rr, w_des] = smoothControl(V,currentPos,targetPos)
     k1 = 1;
     % EXECUTABLE CODE --------
     vv = V; % fps
+    robotHeading = currentPos(3)*pi/180.; % now in radians
+    % Check if we are going backwards!
+    if V < 0
+        vv = -V;
+        robotHeading = robotHeading + pi;
+        robotHeading = limitAngle( robotHeading );
+    end
     % Compute range to target using differences in x, y field positions
     dx = targetPos(1) - currentPos(1);
     dy = targetPos(2) - currentPos(2);
@@ -36,7 +43,7 @@ function [rr, w_des] = smoothControl(V,currentPos,targetPos)
     % This routine simply keeps this angle bounded between +/-pi
     thetaT = limitAngle( thetaT );
     % del_r is angle between current robot orientation and range vector
-    del_r = (currentPos(3)/57.3) - r_angle; % radians
+    del_r = robotHeading - r_angle; % radians
     del_r = limitAngle( del_r );
     % Now the desired angular rate:
     w_des = -(vv/rr) * ( ...

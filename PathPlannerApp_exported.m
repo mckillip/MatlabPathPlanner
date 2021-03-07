@@ -165,16 +165,9 @@ classdef PathPlannerApp_exported < matlab.apps.AppBase
                 if range > .4
                     % Yes, keep on truckin!
                     rPos = app.Robot.pose;
-                    if v < 0
-                        rPos(3) = rPos(3) + 180.; % the back is the front!
-                        while rPos(3) > 180.
-                            rPos(3) = rPos(3) - 360.;
-                        end
-                    end
-                    % rPos is a possibly modified representation of the
-                    % robot pose, as it has a 180deg flip if we are running
-                    % in reverse.
-                    [range,w_des] = smoothControl(abs(v),rPos,targetPose);
+                    % We have a choice: MATLAB function or Java class!
+%                    [range,w_des] = smoothControl(v,rPos,targetPose);
+                    [range,w_des] = smoothControl2(v,rPos,targetPose);
 %                    disp([range, w_des]);
                 else
                     % We are close enough to switch, so:
