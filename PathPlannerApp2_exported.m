@@ -24,6 +24,7 @@ classdef PathPlannerApp2_exported < matlab.apps.AppBase
         UIAxes3                     matlab.ui.control.UIAxes
         AddleadingrowButton         matlab.ui.control.Button
         DeletepickedrowButton       matlab.ui.control.Button
+        SavetomyPathcsvCheckBox     matlab.ui.control.CheckBox
     end
 
 
@@ -49,6 +50,8 @@ classdef PathPlannerApp2_exported < matlab.apps.AppBase
         curvature               % 1 / turn radius = omega_des / v
         pickedRow = 1           % user-selected row in table
         hTraj                   % handles to trajectory points
+        saveCSV                 % flags for storing CSV of path
+        fidCSV                  % file ID for storage of CSV path
     end
     
     methods (Access = private)
@@ -175,6 +178,17 @@ classdef PathPlannerApp2_exported < matlab.apps.AppBase
                 gif('myPath.gif','frame',app.UIAxes);
             end
             
+            % Want a CSV?
+            if app.saveCSV
+                % We make the output file name match the path
+                fn = app.tableName{app.pathNumber};
+                fn([14 15 16]) = ['c','s','v'];
+                % open the file for saving
+                app.fidCSV = fopen(fn,'w');
+                fprintf(app.fidCSV,'%f, %f, %f, %f\n', ...
+                    t.X(1),t.Y(1),t.H(1),t.V(1));
+            end
+            
             % Initialize counters and such
             range = inf;
             inode = 2; % pointer to next node in table
@@ -241,7 +255,15 @@ classdef PathPlannerApp2_exported < matlab.apps.AppBase
                         gif
                     end
                 end                
-                % pause to generate graphics update
+                % Want a CSV?
+                if app.saveCSV
+                    fprintf(app.fidCSV,'%f, %f, %f, %f\n', ...
+                        app.Robot.pose(1), ...
+                        app.Robot.pose(2), ...
+                        mod(app.Robot.pose(3),360.), ...
+                        v);
+                end
+                 % pause to generate graphics update
                 pause(dt);
                 i = i + 1;
                 % Compute lap time
@@ -260,7 +282,9 @@ classdef PathPlannerApp2_exported < matlab.apps.AppBase
 %                ph3.YData = app.curvature;
                 ph3.YData = app.turnRadius;
             end % ends while loop over all nodes
-            
+            if app.saveCSV
+                fclose(app.fidCSV);
+            end
             
         end
 
@@ -314,6 +338,11 @@ classdef PathPlannerApp2_exported < matlab.apps.AppBase
             app.UITable.Data = Ddata;
             UITableDisplayDataChanged(app);
         end
+
+        % Value changed function: SavetomyPathcsvCheckBox
+        function SavetomyPathcsvCheckBoxValueChanged(app, event)
+            app.saveCSV = app.SavetomyPathcsvCheckBox.Value;
+        end
     end
 
     % Component initialization
@@ -341,7 +370,7 @@ classdef PathPlannerApp2_exported < matlab.apps.AppBase
             app.CourseSelectionButtonGroup = uibuttongroup(app.AutonomousCourseUIFigure);
             app.CourseSelectionButtonGroup.SelectionChangedFcn = createCallbackFcn(app, @courseSelection, true);
             app.CourseSelectionButtonGroup.Title = 'Course Selection';
-            app.CourseSelectionButtonGroup.Position = [39 422 123 106];
+            app.CourseSelectionButtonGroup.Position = [39 424 123 106];
 
             % Create SlalomButton
             app.SlalomButton = uiradiobutton(app.CourseSelectionButtonGroup);
@@ -363,38 +392,38 @@ classdef PathPlannerApp2_exported < matlab.apps.AppBase
             app.SimulateButton = uibutton(app.AutonomousCourseUIFigure, 'push');
             app.SimulateButton.ButtonPushedFcn = createCallbackFcn(app, @simulateRobot, true);
             app.SimulateButton.BackgroundColor = [0.5098 0.9294 0.3451];
-            app.SimulateButton.Position = [42 392 118 22];
+            app.SimulateButton.Position = [42 395 118 22];
             app.SimulateButton.Text = 'Simulate!';
 
             % Create SavetomyPathgifCheckBox
             app.SavetomyPathgifCheckBox = uicheckbox(app.AutonomousCourseUIFigure);
             app.SavetomyPathgifCheckBox.ValueChangedFcn = createCallbackFcn(app, @recordGIF, true);
             app.SavetomyPathgifCheckBox.Text = 'Save to myPath.gif';
-            app.SavetomyPathgifCheckBox.Position = [39 330 123 22];
+            app.SavetomyPathgifCheckBox.Position = [39 338 123 22];
 
             % Create EStopButton
             app.EStopButton = uibutton(app.AutonomousCourseUIFigure, 'push');
             app.EStopButton.ButtonPushedFcn = createCallbackFcn(app, @eStop, true);
             app.EStopButton.BackgroundColor = [0.9412 0.4706 0.4706];
-            app.EStopButton.Position = [42 360 118 22];
+            app.EStopButton.Position = [42 366 118 22];
             app.EStopButton.Text = 'E-Stop';
 
             % Create LapTimeEditFieldLabel
             app.LapTimeEditFieldLabel = uilabel(app.AutonomousCourseUIFigure);
             app.LapTimeEditFieldLabel.HorizontalAlignment = 'right';
-            app.LapTimeEditFieldLabel.Position = [50 263 55 22];
+            app.LapTimeEditFieldLabel.Position = [50 255 55 22];
             app.LapTimeEditFieldLabel.Text = 'Lap Time';
 
             % Create LapTimeEditField
             app.LapTimeEditField = uieditfield(app.AutonomousCourseUIFigure, 'numeric');
             app.LapTimeEditField.Limits = [0 Inf];
             app.LapTimeEditField.ValueDisplayFormat = '%7.2f';
-            app.LapTimeEditField.Position = [108 263 54 22];
+            app.LapTimeEditField.Position = [108 255 54 22];
 
             % Create GIFframeskipEditFieldLabel
             app.GIFframeskipEditFieldLabel = uilabel(app.AutonomousCourseUIFigure);
             app.GIFframeskipEditFieldLabel.HorizontalAlignment = 'right';
-            app.GIFframeskipEditFieldLabel.Position = [42 298 84 22];
+            app.GIFframeskipEditFieldLabel.Position = [42 312 84 22];
             app.GIFframeskipEditFieldLabel.Text = 'GIF frame skip';
 
             % Create GIFframeskipEditField
@@ -402,7 +431,7 @@ classdef PathPlannerApp2_exported < matlab.apps.AppBase
             app.GIFframeskipEditField.Limits = [1 10];
             app.GIFframeskipEditField.RoundFractionalValues = 'on';
             app.GIFframeskipEditField.ValueChangedFcn = createCallbackFcn(app, @newGIFskip, true);
-            app.GIFframeskipEditField.Position = [133 298 29 22];
+            app.GIFframeskipEditField.Position = [133 312 29 22];
             app.GIFframeskipEditField.Value = 2;
 
             % Create TabGroup
@@ -454,7 +483,7 @@ classdef PathPlannerApp2_exported < matlab.apps.AppBase
             % Create AddleadingrowButton
             app.AddleadingrowButton = uibutton(app.AutonomousCourseUIFigure, 'push');
             app.AddleadingrowButton.ButtonPushedFcn = createCallbackFcn(app, @AddleadingrowButtonPushed, true);
-            app.AddleadingrowButton.Position = [42 230 118 22];
+            app.AddleadingrowButton.Position = [42 227 118 22];
             app.AddleadingrowButton.Text = 'Add leading row';
 
             % Create DeletepickedrowButton
@@ -462,6 +491,12 @@ classdef PathPlannerApp2_exported < matlab.apps.AppBase
             app.DeletepickedrowButton.ButtonPushedFcn = createCallbackFcn(app, @DeletepickedrowButtonPushed, true);
             app.DeletepickedrowButton.Position = [42 199 118 22];
             app.DeletepickedrowButton.Text = 'Delete picked row';
+
+            % Create SavetomyPathcsvCheckBox
+            app.SavetomyPathcsvCheckBox = uicheckbox(app.AutonomousCourseUIFigure);
+            app.SavetomyPathcsvCheckBox.ValueChangedFcn = createCallbackFcn(app, @SavetomyPathcsvCheckBoxValueChanged, true);
+            app.SavetomyPathcsvCheckBox.Text = 'Save to myPath.csv';
+            app.SavetomyPathcsvCheckBox.Position = [39 285 129 22];
 
             % Show the figure after all components are created
             app.AutonomousCourseUIFigure.Visible = 'on';
